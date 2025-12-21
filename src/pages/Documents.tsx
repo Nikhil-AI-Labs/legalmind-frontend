@@ -24,7 +24,6 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   getDocuments,
-  checkDocumentExists,
   type DocumentSummary,
 } from "@/lib/api/legalBackend";
 
@@ -57,22 +56,10 @@ const Documents = () => {
     const fetchDocuments = async () => {
       try {
         setLoading(true);
+        // getDocuments() returns only completed documents from Supabase
+        // No need to validate - backend already filters status="completed"
         const data = await getDocuments();
-        
-        // Validate each document still exists (handles deleted documents)
-        const validDocuments = [];
-        for (const doc of data) {
-          try {
-            const exists = await checkDocumentExists(doc.document_id || doc.id);
-            if (exists) {
-              validDocuments.push(doc);
-            }
-          } catch (error) {
-            console.warn(`Could not verify document ${doc.id}, excluding from list`);
-          }
-        }
-        
-        setDocuments(validDocuments);
+        setDocuments(data);
       } catch (error: any) {
         toast({
           title: "Error",
