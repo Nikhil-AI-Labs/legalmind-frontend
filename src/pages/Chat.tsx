@@ -109,9 +109,33 @@ const Chat = () => {
           return;
         }
 
-        const [details, reportRes, suggestions] = await Promise.all([
+        // Helper function to retry getting report (in case of race condition)
+        const getReportWithRetry = async (maxRetries = 3) => {
+          let lastError: any;
+          for (let i = 0; i < maxRetries; i++) {
+            try {
+              return await getReport(documentId);
+            } catch (error) {
+              lastError = error;
+              if (i < maxRetries - 1) {
+                // Wait before retrying (exponential backoff: 500ms, 1000ms, 1500ms)
+                await new Promise(resolve => setTimeout(resolve, (i + 1) * 500));
+              }
+            }
+          }
+          throw lastError;
+        };
+
+        let reportRes: any = null;
+        try {
+          reportRes = await getReportWithRetry();
+        } catch (error) {
+          console.warn("Could not load report, will show placeholder:", error);
+          reportRes = { report: "Report is being generated. Please try again in a moment." };
+        }
+
+        const [details, suggestions] = await Promise.all([
           getDocumentDetails(documentId),
-          getReport(documentId),
           getChatbotSuggestions(documentId),
         ]);
 
@@ -127,7 +151,7 @@ const Chat = () => {
         baseMessages.push({
           id: `report-${documentId}`,
           role: "assistant",
-          content: reportRes.report,
+          content: reportRes?.report || "Analysis report is being prepared...",
           timestamp: new Date().toISOString(),
           isReport: true,
         });
@@ -149,6 +173,8 @@ const Chat = () => {
           timestamp: new Date().toISOString(),
         });
 
+        console.log("[Chat] Setting base messages:", baseMessages.length, baseMessages);
+
         // Try to load chat history from Supabase (if user is logged in)
         let hasLoadedHistory = false;
         try {
@@ -164,6 +190,7 @@ const Chat = () => {
                   content: msg.content,
                   timestamp: new Date().toISOString(),
                 }));
+              console.log("[Chat] Setting messages with history:", baseMessages.length + convertedHistory.length);
               setMessages([...baseMessages, ...convertedHistory]);
               hasLoadedHistory = true;
               setLoadingInitial(false);
@@ -171,25 +198,30 @@ const Chat = () => {
             }
           }
         } catch (e) {
-          // Silently fail and fallback to localStorage
-          const storageKey = `chat_${documentId}`;
-          const stored = localStorage.getItem(storageKey);
-          if (stored && !hasLoadedHistory) {
-            try {
-              const parsed: Message[] = JSON.parse(stored);
-              const localHistory = parsed
-                .filter((m) => !m.isReport && !m.content.includes("I've analyzed your contract"))
-                .map((m, idx) => ({
-                  ...m,
-                  id: `local-${idx}-${documentId}`,
-                }));
-              setMessages([...baseMessages, ...localHistory]);
-            } catch {
-              setMessages(baseMessages);
-            }
-          } else if (!hasLoadedHistory) {
+          console.warn("[Chat] getChatHistory failed, trying localStorage:", e);
+        }
+
+        // Fallback to localStorage
+        const storageKey = `chat_${documentId}`;
+        const stored = localStorage.getItem(storageKey);
+        if (stored && !hasLoadedHistory) {
+          try {
+            const parsed: Message[] = JSON.parse(stored);
+            const localHistory = parsed
+              .filter((m) => !m.isReport && !m.content.includes("I've analyzed your contract"))
+              .map((m, idx) => ({
+                ...m,
+                id: `local-${idx}-${documentId}`,
+              }));
+            console.log("[Chat] Setting messages with localStorage history:", baseMessages.length + localHistory.length);
+            setMessages([...baseMessages, ...localHistory]);
+          } catch {
+            console.log("[Chat] Setting only base messages (localStorage parse failed)");
             setMessages(baseMessages);
           }
+        } else if (!hasLoadedHistory) {
+          console.log("[Chat] Setting only base messages (no history found)");
+          setMessages(baseMessages);
         }
       } catch (error: any) {
         toast({
@@ -425,22 +457,20 @@ const Chat = () => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {loadingInitial ? (
+          {loadingInitial && documentId ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : messages.length === 0 ? (
+          ) : messages.length === 0 && !documentId ? (
             <div className="text-center py-12">
               <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto mb-4">
                 <Sparkles className="h-10 w-10 text-primary" />
               </div>
               <h2 className="font-display text-xl font-bold mb-2">
-                {documentId ? "Ask about this document" : "How can I help?"}
+                How can I help?
               </h2>
               <p className="text-muted-foreground text-sm mb-6">
-                {documentId 
-                  ? "I've loaded the document context. Ask me anything about it."
-                  : "I can help you understand legal concepts and analyze documents."}
+                I can help you understand legal concepts and analyze documents.
               </p>
               
               {/* Suggested Questions */}
@@ -484,11 +514,12 @@ const Chat = () => {
                         : "glass"
                     }
                 className={cn(
-                  "max-w-[80%] px-4 py-3",
+                  "px-4 py-3",
                   message.role === "user" 
-                    ? "bg-gradient-primary text-primary-foreground" 
-                        : "",
-                      message.isReport && "bg-muted text-xs font-mono",
+                    ? "max-w-[80%] bg-gradient-primary text-primary-foreground" 
+                        : message.isReport 
+                        ? "w-full bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30"
+                        : "max-w-[80%]",
                 )}
               >
                     <RichText
@@ -696,7 +727,7 @@ function RichText({ content, isReport }: RichTextProps) {
       elements.push(
         <div key={key} className={cn("flex text-sm gap-2", isReport && "gap-1.5")}>
           <span className={cn("shrink-0", isReport ? "text-primary/60" : "text-primary")}>▸</span>
-          <span className={isReport ? "text-xs" : ""}>{formatInline(line.slice(2))}</span>
+          <span>{formatInline(line.slice(2))}</span>
         </div>,
       );
     } 
@@ -708,7 +739,7 @@ function RichText({ content, isReport }: RichTextProps) {
           <span className="shrink-0 font-semibold text-primary/80">
             {match?.[1]}
           </span>
-          <span className={isReport ? "text-xs" : ""}>
+          <span>
             {formatInline(match?.[2] || "")}
           </span>
         </div>,
@@ -721,7 +752,7 @@ function RichText({ content, isReport }: RichTextProps) {
           key={key} 
           className={cn(
             "whitespace-pre-wrap leading-relaxed",
-            isReport ? "text-xs" : "text-sm",
+            isReport ? "text-sm" : "text-sm",
           )}
         >
           {formatInline(line)}
