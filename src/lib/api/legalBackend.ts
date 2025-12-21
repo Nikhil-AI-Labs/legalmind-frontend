@@ -177,6 +177,27 @@ export async function getDocumentDetails(
   return handleResponse<DocumentDetails>(response);
 }
 
+export async function checkDocumentExists(
+  documentId: string
+): Promise<boolean> {
+  /**
+   * Verify if document still exists and belongs to current user
+   * Returns false if: document deleted, not found, or user unauthorized
+   */
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/document-exists/${documentId}`,
+      { headers }
+    );
+    const data = await handleResponse<{ exists: boolean; message: string }>(response);
+    return data.exists ?? false;
+  } catch (error) {
+    console.error("Error checking document existence:", error);
+    return false; // Assume deleted if verification fails
+  }
+}
+
 export async function chatWithDocument(
   documentId: string,
   message: string,
