@@ -13,6 +13,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   getDocuments,
+  checkDocumentExists,
   type DocumentSummary,
 } from "@/lib/api/legalBackend";
 
@@ -33,6 +35,7 @@ type FilterOption = "all" | "safe" | "high-risk" | "analyzing";
 const Documents = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -41,11 +44,35 @@ const Documents = () => {
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
 
   useEffect(() => {
+    // Wait for auth to load before fetching documents
+    if (authLoading) return;
+    
+    // If user not logged in, show empty list
+    if (!user?.id) {
+      setDocuments([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchDocuments = async () => {
       try {
         setLoading(true);
         const data = await getDocuments();
-        setDocuments(data);
+        
+        // Validate each document still exists (handles deleted documents)
+        const validDocuments = [];
+        for (const doc of data) {
+          try {
+            const exists = await checkDocumentExists(doc.document_id || doc.id);
+            if (exists) {
+              validDocuments.push(doc);
+            }
+          } catch (error) {
+            console.warn(`Could not verify document ${doc.id}, excluding from list`);
+          }
+        }
+        
+        setDocuments(validDocuments);
       } catch (error: any) {
         toast({
           title: "Error",
@@ -59,7 +86,7 @@ const Documents = () => {
     };
 
     fetchDocuments();
-  }, [toast]);
+  }, [user?.id, authLoading, toast]);
 
   const handleDocumentClick = (docId: string) => {
     navigate(`/chat/${docId}`);
@@ -247,7 +274,7 @@ const Documents = () => {
                             {total > 0 && ` / ${total}`}
                           </span>
                           <Button
-                            size="xs"
+                            size="sm"
                             variant="outline"
                             className="h-7 px-2 text-[11px]"
                             onClick={(e) => {
