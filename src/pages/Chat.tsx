@@ -24,6 +24,7 @@ import {
   saveChatHistory,
   getChatHistory,
   deleteChatHistory,
+  checkDocumentExists,
   type ChatHistoryItem,
 } from "@/lib/api/legalBackend";
 
@@ -95,6 +96,18 @@ const Chat = () => {
     const load = async () => {
       try {
         setLoadingInitial(true);
+
+        // ✅ SAFETY CHECK: Verify document still exists before loading
+        const exists = await checkDocumentExists(documentId);
+        if (!exists) {
+          toast({
+            title: "Document Not Found",
+            description: "This document no longer exists or has been deleted. Redirecting to documents...",
+            variant: "destructive",
+          });
+          navigate("/documents");
+          return;
+        }
 
         const [details, reportRes, suggestions] = await Promise.all([
           getDocumentDetails(documentId),
