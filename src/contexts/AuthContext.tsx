@@ -11,6 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
+  updateProfile: (data: { displayName?: string }) => Promise<{ error: Error | null }>;
   resendConfirmation: (email: string) => Promise<{ error: Error | null }>;
   deleteAccount: () => Promise<{ error: Error | null }>;
 }
@@ -95,6 +96,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const updateProfile = async (data: { displayName?: string }) => {
+    const updates: any = {};
+    if (data.displayName) {
+      updates.data = { display_name: data.displayName };
+    }
+
+    const { error, data: userData } = await supabase.auth.updateUser(updates);
+    
+    if (userData.user) {
+      setUser(userData.user);
+    }
+    
+    return { error: error as Error | null };
+  };
+
   const resendConfirmation = async (email: string) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
@@ -149,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resetPassword,
         updatePassword,
+        updateProfile,
         resendConfirmation,
         deleteAccount,
       }}
