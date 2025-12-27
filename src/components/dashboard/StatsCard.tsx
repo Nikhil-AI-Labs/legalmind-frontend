@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
   icon: LucideIcon;
-  value: number;
+  value: number | string;
   label: string;
   variant?: "default" | "danger" | "success";
 }
