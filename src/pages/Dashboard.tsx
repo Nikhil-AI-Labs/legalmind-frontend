@@ -45,7 +45,7 @@ const Dashboard = () => {
     navigate("/upload");
   };
 
-  const userName = user?.email?.split("@")[0] || "User";
+  const userName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
 
   const mapStatus = (doc: DocumentSummary): Document["status"] => {
     const score = doc.risk_score ?? 0;
@@ -65,7 +65,7 @@ const Dashboard = () => {
           addSuffix: true,
         }),
         status: mapStatus(doc),
-    riskScore: doc.risk_score ?? undefined,
+        riskScore: doc.risk_score ?? undefined,
       })),
     [documents],
   );
@@ -79,14 +79,14 @@ const Dashboard = () => {
           subtitle="Your legal documents at a glance"
           action={
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 className="p-2 rounded-xl glass hover:bg-card/80 transition-colors touch-target relative"
                 onClick={() => navigate('/notifications')}
               >
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
               </button>
-              <button 
+              <button
                 onClick={handleSignOut}
                 className="p-2 rounded-xl glass hover:bg-card/80 transition-colors touch-target"
                 title="Sign out"
@@ -117,22 +117,22 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <StatsCard 
-              icon={FileText} 
-              value={stats.totalDocuments} 
-              label="Contracts" 
+            <StatsCard
+              icon={FileText}
+              value={stats.totalDocuments}
+              label="Contracts"
             />
-            <StatsCard 
-              icon={AlertTriangle} 
-              value={`${stats.averageRiskPercentage}%`} 
-              label="Risk" 
-              variant="danger" 
+            <StatsCard
+              icon={AlertTriangle}
+              value={`${stats.averageRiskPercentage}%`}
+              label="Risk"
+              variant="danger"
             />
-            <StatsCard 
-              icon={ShieldCheck} 
-              value={`${stats.averageSafePercentage}%`} 
-              label="Safe" 
-              variant="success" 
+            <StatsCard
+              icon={ShieldCheck}
+              value={`${stats.averageSafePercentage}%`}
+              label="Safe"
+              variant="success"
             />
           </div>
         )}
@@ -141,8 +141,8 @@ const Dashboard = () => {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-lg font-bold">Recent Documents</h2>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => navigate('/documents')}
             >
@@ -158,7 +158,7 @@ const Dashboard = () => {
             <>
               <div className="space-y-3">
                 {recentDocuments.map((doc) => (
-                  <DocumentCard 
+                  <DocumentCard
                     key={doc.id}
                     document={doc}
                     onClick={() => handleDocumentClick(doc.id)}
@@ -167,15 +167,15 @@ const Dashboard = () => {
               </div>
 
               {recentDocuments.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No documents yet</p>
-              <p className="text-sm text-muted-foreground/70">Upload your first document to get started</p>
-              <Button variant="gradient" className="mt-4" onClick={handleUpload}>
-                <Plus className="h-4 w-4 mr-2" />
-                Upload Document
-              </Button>
-            </div>
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No documents yet</p>
+                  <p className="text-sm text-muted-foreground/70">Upload your first document to get started</p>
+                  <Button variant="gradient" className="mt-4" onClick={handleUpload}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Document
+                  </Button>
+                </div>
               )}
             </>
           )}
@@ -183,7 +183,7 @@ const Dashboard = () => {
       </div>
 
       {/* Floating Action Button */}
-      <button 
+      <button
         className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-gradient-primary shadow-glow flex items-center justify-center text-primary-foreground hover:scale-105 transition-transform touch-target z-40"
         onClick={handleUpload}
       >
