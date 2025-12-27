@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { 
-  User, 
-  Mail, 
-  Bell, 
-  Shield, 
-  LogOut, 
+import {
+  User,
+  Mail,
+  Bell,
+  Shield,
+  LogOut,
   ChevronRight,
   Camera,
   Trash2
@@ -38,11 +38,11 @@ import {
 } from "@/components/ui/dialog";
 
 const Profile = () => {
-  const { user, signOut, updatePassword } = useAuth();
+  const { user, signOut, updatePassword, updateProfile, deleteAccount } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  const [displayName, setDisplayName] = useState(user?.email?.split("@")[0] || "");
+
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "");
   const [notifications, setNotifications] = useState({
     analysisComplete: true,
     highRiskAlerts: true,
@@ -55,6 +55,7 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,11 +66,22 @@ const Profile = () => {
     navigate("/");
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Profile updated",
-      description: "Your changes have been saved.",
-    });
+  const handleSave = async () => {
+    try {
+      const { error } = await updateProfile({ displayName });
+      if (error) throw error;
+
+      toast({
+        title: "Profile updated",
+        description: "Your changes have been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleChangePassword = async () => {
@@ -104,7 +116,7 @@ const Profile = () => {
     setPasswordLoading(true);
     try {
       const { error } = await updatePassword(newPassword);
-      
+
       if (error) {
         toast({
           title: "Password change failed",
@@ -135,9 +147,10 @@ const Profile = () => {
   const handleDeleteAccount = async () => {
     try {
       setDeleteLoading(true);
-      const { deleteAccount } = await import("@/lib/api/legalBackend");
-      
-      await deleteAccount();
+
+      const { error } = await deleteAccount();
+
+      if (error) throw error;
 
       toast({
         title: "Account deleted",
@@ -240,7 +253,7 @@ const Profile = () => {
               </div>
               <Switch
                 checked={notifications.analysisComplete}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setNotifications(prev => ({ ...prev, analysisComplete: checked }))
                 }
               />
@@ -254,7 +267,7 @@ const Profile = () => {
               </div>
               <Switch
                 checked={notifications.highRiskAlerts}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setNotifications(prev => ({ ...prev, highRiskAlerts: checked }))
                 }
               />
@@ -268,7 +281,7 @@ const Profile = () => {
               </div>
               <Switch
                 checked={notifications.weeklyDigest}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setNotifications(prev => ({ ...prev, weeklyDigest: checked }))
                 }
               />
@@ -286,14 +299,14 @@ const Profile = () => {
           </CardHeader>
           <CardContent>
             <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-              <button 
+              <button
                 className="w-full flex items-center justify-between py-3 hover:bg-muted/50 rounded-lg px-2 -mx-2 transition-colors text-left"
                 onClick={() => setPasswordDialogOpen(true)}
               >
                 <span className="text-sm">Change Password</span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
-              
+
               <DialogContent className="glass">
                 <DialogHeader>
                   <DialogTitle>Change Password</DialogTitle>
@@ -301,7 +314,7 @@ const Profile = () => {
                     Enter your new password below. Make sure it's at least 6 characters long.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">
@@ -315,7 +328,7 @@ const Profile = () => {
                       disabled={passwordLoading}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">
                       New Password
@@ -328,7 +341,7 @@ const Profile = () => {
                       disabled={passwordLoading}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">
                       Confirm New Password
@@ -342,7 +355,7 @@ const Profile = () => {
                     />
                   </div>
                 </div>
-                
+
                 <DialogFooter>
                   <Button
                     variant="outline"
@@ -366,8 +379,8 @@ const Profile = () => {
 
         {/* Account Actions */}
         <div className="space-y-3">
-          <Button 
-            variant="glass" 
+          <Button
+            variant="glass"
             className="w-full justify-start"
             onClick={handleSignOut}
           >
@@ -377,8 +390,8 @@ const Profile = () => {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -389,13 +402,13 @@ const Profile = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Account</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your 
+                  This action cannot be undone. This will permanently delete your
                   account and remove all your data from our servers.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={handleDeleteAccount}
                   className="bg-destructive hover:bg-destructive/90"
                 >
