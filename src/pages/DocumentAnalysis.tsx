@@ -113,7 +113,7 @@ const DocumentAnalysis = () => {
   const [shareLoading, setShareLoading] = useState(false);
 
   // In real app, fetch document by id
-  const document = mockDocument;
+  const documentData = mockDocument;
   
   const getRiskColor = (score: number) => {
     if (score >= 70) return "text-destructive";
@@ -145,7 +145,7 @@ const DocumentAnalysis = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${document.title.replace(/\s+/g, "_")}_report.txt`;
+      link.download = `${documentData.title.replace(/\s+/g, "_")}_report.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -174,8 +174,8 @@ const DocumentAnalysis = () => {
       // Check if Web Share API is available
       if (navigator.share) {
         await navigator.share({
-          title: `Legal Analysis: ${document.title}`,
-          text: `Risk Score: ${document.riskScore}% - ${getRiskLabel(document.riskScore)}`,
+          title: `Legal Analysis: ${documentData.title}`,
+          text: `Risk Score: ${documentData.riskScore}% - ${getRiskLabel(documentData.riskScore)}`,
           url: window.location.href,
         });
         toast({
@@ -184,7 +184,7 @@ const DocumentAnalysis = () => {
         });
       } else {
         // Fallback: Copy to clipboard
-        const text = `${document.title}\nRisk Score: ${document.riskScore}%\n${window.location.href}`;
+        const text = `${documentData.title}\nRisk Score: ${documentData.riskScore}%\n${window.location.href}`;
         await navigator.clipboard.writeText(text);
         toast({
           title: "Copied to clipboard",
@@ -222,8 +222,8 @@ const DocumentAnalysis = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="font-display font-bold truncate">{document.title}</h1>
-              <p className="text-xs text-muted-foreground">Uploaded {document.uploadedAt}</p>
+              <h1 className="font-display font-bold truncate">{documentData.title}</h1>
+              <p className="text-xs text-muted-foreground">Uploaded {documentData.uploadedAt}</p>
             </div>
           </div>
         </header>
@@ -238,12 +238,12 @@ const DocumentAnalysis = () => {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={document.status === "safe" ? "safe" : "high-risk"}>
-                      {document.status === "safe" ? "Safe" : "High Risk"}
+                    <Badge variant={documentData.status === "safe" ? "safe" : "high-risk"}>
+                      {documentData.status === "safe" ? "Safe" : "High Risk"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {document.findings.length} findings detected
+                    {documentData.findings.length} findings detected
                   </p>
                 </div>
               </div>
@@ -299,12 +299,12 @@ const DocumentAnalysis = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Overall Risk Score</span>
-                <span className={cn("text-3xl font-bold font-display", getRiskColor(document.riskScore))}>
-                  {document.riskScore}%
+                <span className={cn("text-3xl font-bold font-display", getRiskColor(documentData.riskScore))}>
+                  {documentData.riskScore}%
                 </span>
               </div>
               <Progress 
-                value={document.riskScore} 
+                value={documentData.riskScore} 
                 className="h-3"
               />
               <div className="flex items-center justify-between text-sm">
@@ -318,19 +318,19 @@ const DocumentAnalysis = () => {
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <p className="text-2xl font-bold text-destructive">
-                      {document.findings.filter(f => f.severity === "high").length}
+                      {documentData.findings.filter(f => f.severity === "high").length}
                     </p>
                     <p className="text-xs text-muted-foreground">High</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-warning">
-                      {document.findings.filter(f => f.severity === "medium").length}
+                      {documentData.findings.filter(f => f.severity === "medium").length}
                     </p>
                     <p className="text-xs text-muted-foreground">Medium</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-muted-foreground">
-                      {document.findings.filter(f => f.severity === "low").length}
+                      {documentData.findings.filter(f => f.severity === "low").length}
                     </p>
                     <p className="text-xs text-muted-foreground">Low</p>
                   </div>
@@ -345,7 +345,7 @@ const DocumentAnalysis = () => {
               <h2 className="font-display font-bold text-lg">Key Findings</h2>
             </CardHeader>
             <CardContent className="space-y-3">
-              {document.findings.map((finding) => {
+              {documentData.findings.map((finding) => {
                 const config = severityConfig[finding.severity];
                 const Icon = config.icon;
                 return (
@@ -385,7 +385,7 @@ const DocumentAnalysis = () => {
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {document.recommendations.map((rec, index) => (
+                {documentData.recommendations.map((rec, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <div className="p-1 rounded-full bg-success/20 mt-0.5">
                       <CheckCircle className="h-4 w-4 text-success" />
